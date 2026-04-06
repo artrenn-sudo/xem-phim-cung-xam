@@ -213,8 +213,9 @@ function toggleTheme() {
 function toggleSearch() {
     const box = $('searchBox');
     const results = $('searchResults');
-    box.classList.toggle('active');
-    if (box.classList.contains('active')) {
+    const isActive = box.classList.toggle('active');
+    document.body.classList.toggle('search-active', isActive);
+    if (isActive) {
         $('searchInput').focus();
     } else {
         $('searchInput').value = '';
@@ -240,7 +241,7 @@ function initSearch() {
         if (e.key === 'Enter') {
             const q = input.value.trim();
             if (q.length >= 1) { 
-                toggleSearch(); 
+                if ($('searchBox').classList.contains('active')) toggleSearch(); 
                 navigateTo('search', q); 
             }
         }
@@ -284,15 +285,27 @@ function toggleMobileMenu() {
 }
 
 // --- Navigation ---
-function navigateTo(page, param = '', extra = '') {
+function navigateTo(page, param = '', extra = '', updateHash = true) {
     currentPage = page;
     window._currentParam = param;
     window._currentExtra = extra;
+    
+    if (updateHash) {
+        let hash = `#/${page}`;
+        if (param) hash += `/${param}`;
+        if (extra) hash += `/${extra}`;
+        window.location.hash = hash;
+    }
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
     $$('.nav-link').forEach(l => l.classList.remove('active'));
     const activeLink = document.querySelector(`.nav-link[data-page="${param || page}"]`);
     if (activeLink) activeLink.classList.add('active');
     if (heroInterval) { clearInterval(heroInterval); heroInterval = null; }
+    
+    // Hide mobile menu if open
+    if ($('mobileMenu')?.classList.contains('active')) toggleMobileMenu();
+
     switch(page) {
         case 'home': renderHomePage(); break;
         case 'detail': renderDetailPage(param); break;
@@ -303,6 +316,18 @@ function navigateTo(page, param = '', extra = '') {
         case 'favorites': renderFavoritesPage(); break;
         case 'history': renderHistoryPage(); break;
     }
+}
+
+function handleRouting() {
+    const hash = window.location.hash.substring(2); // Remove #/
+    if (!hash) { navigateTo('home', '', '', false); return; }
+    
+    const parts = hash.split('/');
+    const page = parts[0] || 'home';
+    const param = parts[1] || '';
+    const extra = parts[2] || '';
+    
+    navigateTo(page, param, extra, false);
 }
 
 // --- Movie Card HTML ---
@@ -772,28 +797,32 @@ function playEpisode(btn, slug, episodeName) {
     video.ontimeupdate = () => {
         const timeLeft = video.duration - video.currentTime;
         
-        // Skip Intro Button (Show only in first 5 mins - 300s)
+        // Skip Intro Button (Show after 10s, visible for 20s)
         let skipBtn = document.getElementById('skipIntroBtn');
-        if (video.currentTime > 5 && video.currentTime < 300) {
+        if (video.currentTime > 10 && video.currentTime < 300) {
             if (!skipBtn) {
-                const btnHtml = `<button id="skipIntroBtn" class="skip-intro-btn">⏭️ Bỏ qua giới thiệu</button>`;
-                player.insertAdjacentHTML('beforeend', btnHtml);
-                skipBtn = document.getElementById('skipIntroBtn');
-                skipBtn.onclick = () => { video.currentTime += 90; skipBtn.remove(); };
+                // Check if it was already shown and closed for this video
+                if (!video._skipIntroShown) {
+                    const btnHtml = `<button id="skipIntroBtn" class="skip-intro-btn">⏭️ Bỏ qua giới thiệu</button>`;
+                    player.insertAdjacentHTML('beforeend', btnHtml);
+                    skipBtn = document.getElementById('skipIntroBtn');
+                    skipBtn.onclick = () => { video.currentTime += 90; skipBtn.remove(); };
+                    video._skipIntroShown = true;
+                    // Auto-hide after 20s
+                    setTimeout(() => { if (skipBtn) skipBtn.remove(); }, 20000);
+                }
             }
-        } else if (skipBtn && (video.currentTime >= 300 || video.currentTime < 5)) {
-            skipBtn.remove();
         }
 
-        // Auto Next Countdown (Show in last 12 seconds)
-        if (timeLeft > 0 && timeLeft < 12 && !autoNextShown) {
+        // Auto Next Countdown (Show in last 60 seconds, stay for 10s)
+        if (timeLeft > 0 && timeLeft < 60 && !autoNextShown) {
             const nextBtn = btn.nextElementSibling;
             if (nextBtn && nextBtn.classList.contains('episode-btn')) {
                 autoNextShown = true;
                 const nextName = nextBtn.textContent.trim();
                 const overlayHtml = `
                     <div id="autoNextOverlay" class="auto-next-overlay">
-                        <div class="auto-next-header">Tập tiếp theo sau <span id="autoNextTimer">10</span>s</div>
+                        <div class="auto-next-header">Chuyển tập tiếp sau <span id="autoNextTimer">10</span>s</div>
                         <div class="auto-next-title">${nextName}</div>
                         <div class="auto-next-controls">
                             <button class="auto-next-btn" onclick="this.closest('.auto-next-overlay').remove(); document.querySelector('.episode-btn.active').nextElementSibling.click();">
@@ -819,6 +848,12 @@ function playEpisode(btn, slug, episodeName) {
                         playNextEpisode();
                     }
                 }, 1000);
+
+                // Auto-hide overlay after 10s regardless of countdown if user didn't care
+                setTimeout(() => { 
+                    const overlay = document.getElementById('autoNextOverlay');
+                    if (overlay) overlay.remove(); 
+                }, 10000);
             }
         }
     };
@@ -860,9 +895,12 @@ window.forcePlay = function(type, m3u8, embed, epName, slug) {
             cleanEmbed += (cleanEmbed.includes('?') ? '&' : '?') + 'autoplay=1';
         }
         player.innerHTML = `
-            <iframe src="${cleanEmbed}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>
-            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none;">📺 Embed Mode</div>
-            ${m3u8 ? `<div style="text-align:center; padding:10px; opacity:0.6;"><button class="btn btn-sm" style="font-size:12px;" onclick="forcePlay('hls', '${m3u8}', '${embed}', '${epName}', '${slug}')">⚡ Quay lại Luồng HLS</button></div>` : ''}
+            <iframe src="${cleanEmbed}" allowfullscreen 
+                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen" 
+                    sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
+                    style="width:100%; height:100%; border:none;"></iframe>
+            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none;">📺 Embed Mode (NguonC)</div>
+            ${m3u8 ? `<div style="text-align:center; padding:10px; opacity:0.6;"><button class="btn btn-sm" style="font-size:12px;" onclick="forcePlay('hls', '${m3u8}', '${embed}', '${epName}', '${slug}')">⚡ Dùng Luồng HLS (Khuyên dùng để chặn QC)</button></div>` : ''}
         `;
     } else {
         const fakeBtn = { dataset: { m3u8, embed }, classList: { remove: ()=>{}, add: ()=>{} } };
@@ -954,5 +992,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initScrollEffects();
     initKeyboard();
     renderSourcePicker();
-    navigateTo('home');
+    handleRouting();
+    window.addEventListener('hashchange', handleRouting);
 });
