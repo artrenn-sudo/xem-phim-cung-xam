@@ -619,15 +619,52 @@ function playEpisode(btn, slug, episodeName) {
     btn.classList.add('active');
 
     const embedUrl = btn.dataset.embed;
-    if (!embedUrl) {
+    const m3u8Url = btn.dataset.m3u8;
+
+    if (!embedUrl && !m3u8Url) {
         showToast('Không tìm thấy link phim', '❌');
         return;
     }
 
     const player = $('playerContainer');
-    // NO sandbox attribute - allows the embed player to work properly
-    player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
+    // Cuộn tới player ngay lập tức
     player.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Ưu tiên phát qua HLS (m3u8) để không bị quảng cáo iframe, fallback về embed
+    if (m3u8Url && m3u8Url.trim() !== '') {
+        player.innerHTML = `<video id="hlsVideo" controls playsinline style="width: 100%; height: 100%; border-radius: 12px; background: #000; outline: none;"></video>`;
+        const video = document.getElementById('hlsVideo');
+        
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(m3u8Url);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play().catch(e => console.log('Tự động phát bị chặn'));
+            });
+            // Bắt lỗi HLS để fallback nếu link m3u8 chết
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                 if (data.fatal) {
+                     console.log('Lỗi HLS, fallback qua iframe');
+                     hls.destroy();
+                     player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
+                 }
+            });
+        }
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Dành cho Safari ios
+            video.src = m3u8Url;
+            video.addEventListener('loadedmetadata', function() {
+                video.play().catch(e => console.log('Tự động phát bị chặn'));
+            });
+            video.addEventListener('error', function() {
+                 player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
+            });
+        }
+    } else {
+        // Play fallback
+        player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
+    }
 
     History.add({ slug, name: document.querySelector('.detail-title')?.textContent || '', poster_url: '' }, episodeName);
     showToast(`Đang phát: ${episodeName}`, '▶️');
