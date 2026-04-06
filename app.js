@@ -804,7 +804,7 @@ function playEpisode(btn, slug, episodeName) {
             <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;">⚡ HLS Native</div>
             <div style="display:flex; justify-content:center; gap:10px; padding:15px; background:var(--bg-card); border-radius:0 0 8px 8px;">
                 ${embedUrl ? createManualFallbackBtn('iframe', embedUrl) : ''}
-                <button class="btn btn-sm" onclick="document.querySelector('.episode-btn.active').nextElementSibling?.click()">⏭️ Tập Tiếp Theo</button>
+                <button class="btn btn-next-ep" onclick="document.querySelector('.episode-btn.active').nextElementSibling?.click()">⏭️ Tập Tiếp Theo</button>
             </div>
         `;
         const video = document.getElementById('videoPlayer');
