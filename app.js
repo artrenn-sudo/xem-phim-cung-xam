@@ -3,8 +3,7 @@
    ============================================ */
 
 // --- API Configuration ---
-const API_BASE = 'https://phimapi.com';
-const CDN_IMG = 'https://phimimg.com';
+const API_BASE = 'https://phim.nguonc.com/api';
 
 // --- State ---
 let currentPage = 'home';
@@ -17,16 +16,10 @@ function $$(sel) { return document.querySelectorAll(sel); }
 
 /**
  * Fix poster/thumb URL from API.
- * Home page API returns full URLs (https://phimimg.com/upload/vod/...)
- * v1 API (search, category, genre, country) returns relative paths or different formats
  */
 function getImgUrl(url) {
     if (!url) return '';
-    // Already a full URL
-    if (url.startsWith('http')) return url;
-    // Relative path like "upload/vod/..." or "/upload/vod/..."
-    if (url.startsWith('/')) return CDN_IMG + url;
-    return CDN_IMG + '/' + url;
+    return url;
 }
 
 function truncate(str, len = 150) {
@@ -59,23 +52,29 @@ async function fetchAPI(path) {
 }
 
 async function fetchMovieList(page = 1) {
-    return fetchAPI(`/danh-sach/phim-moi-cap-nhat?page=${page}`);
+    return fetchAPI(`/films/phim-moi-cap-nhat?page=${page}`);
 }
 
 async function fetchMovieDetail(slug) {
-    return fetchAPI(`/phim/${slug}`);
+    return fetchAPI(`/film/${slug}`);
+}
+
+// NguonC paginator normalizer to match existing UI code
+function normalizeList(res) {
+    if (!res || !res.items) return null;
+    return { data: { items: res.items, params: { pagination: { totalPages: res.paginate?.total_page || 1, currentPage: res.paginate?.current_page || 1 } } } };
 }
 
 async function searchMovies(keyword, page = 1) {
-    return fetchAPI(`/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}&page=${page}`);
+    return normalizeList(await fetchAPI(`/films/search?keyword=${encodeURIComponent(keyword)}&page=${page}`));
 }
 
 async function fetchByGenre(slug, page = 1) {
-    return fetchAPI(`/v1/api/the-loai/${slug}?page=${page}`);
+    return normalizeList(await fetchAPI(`/films/the-loai/${slug}?page=${page}`));
 }
 
 async function fetchByCountry(slug, page = 1) {
-    return fetchAPI(`/v1/api/quoc-gia/${slug}?page=${page}`);
+    return normalizeList(await fetchAPI(`/films/quoc-gia/${slug}?page=${page}`));
 }
 
 // --- Favorites Manager ---
@@ -178,7 +177,7 @@ function renderSearchResults(data) {
             <img src="${poster}" alt="${m.name}" onerror="this.outerHTML='<div class=\\'img-error\\' style=\\'width:60px;height:80px;font-size:24px\\'>🎬</div>'">
             <div class="search-result-info">
                 <h4>${m.name}</h4>
-                <p>${m.origin_name || ''} ${m.year ? '• ' + m.year : ''}</p>
+                <p>${m.original_name || m.origin_name || ''} ${m.year ? '• ' + m.year : ''}</p>
             </div>
         </div>`;
     }).join('');
@@ -218,8 +217,9 @@ function movieCardHTML(movie) {
     const isFav = Favorites.has(movie.slug);
     const quality = movie.quality || '';
     const lang = movie.lang || '';
-    const episode = movie.episode_current || '';
-    const movieData = JSON.stringify({slug:movie.slug,name:movie.name,origin_name:movie.origin_name||'',poster_url:movie.poster_url,thumb_url:movie.thumb_url||'',year:movie.year,quality:quality,lang:lang,episode_current:episode}).replace(/"/g, '&quot;');
+    const episode = movie.current_episode || movie.episode_current || '';
+    const origin_name = movie.original_name || movie.origin_name || '';
+    const movieData = JSON.stringify({slug:movie.slug,name:movie.name,origin_name:origin_name,poster_url:movie.poster_url,thumb_url:movie.thumb_url||'',year:movie.year,quality:quality,lang:lang,episode_current:episode}).replace(/"/g, '&quot;');
 
     return `
     <div class="movie-card" onclick="navigateTo('detail', '${movie.slug}')">
@@ -326,10 +326,10 @@ function renderHero(movies) {
                         ${m.quality ? `<span class="hero-badge badge-quality">${m.quality}</span>` : ''}
                         ${m.lang ? `<span class="hero-badge badge-lang">${m.lang}</span>` : ''}
                         ${m.year ? `<span class="hero-badge badge-year">${m.year}</span>` : ''}
-                        ${m.episode_current ? `<span class="hero-badge badge-episode">${m.episode_current}</span>` : ''}
+                        ${(m.episode_current || m.current_episode) ? `<span class="hero-badge badge-episode">${m.episode_current || m.current_episode}</span>` : ''}
                     </div>
                     <h2 class="hero-title">${m.name}</h2>
-                    <p class="hero-subtitle">${m.origin_name || ''}</p>
+                    <p class="hero-subtitle">${m.original_name || m.origin_name || ''}</p>
                     <div class="hero-btns">
                         <button class="btn btn-primary" onclick="event.stopPropagation(); navigateTo('detail', '${m.slug}')">
                             <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -366,9 +366,9 @@ async function renderCategoryPage(type, page = 1) {
     let data;
     if (type === 'phim-moi-cap-nhat') {
         data = await fetchMovieList(page);
-        if (data) data = { data: { items: data.items, params: { pagination: data.pagination } } };
+        if (data) data = normalizeList(data);
     } else {
-        data = await fetchAPI(`/v1/api/danh-sach/${type}?page=${page}`);
+        data = normalizeList(await fetchAPI(`/films/danh-sach/${type}?page=${page}`));
     }
 
     if (!data || !data.data || !data.data.items) {
@@ -539,12 +539,14 @@ async function renderDetailPage(slug) {
     const actors = (m.actor || []).join(', ');
     const directors = (m.director || []).join(', ');
 
-    const favData = JSON.stringify({slug:m.slug,name:m.name,origin_name:m.origin_name,poster_url:m.poster_url,thumb_url:m.thumb_url,year:m.year,quality:m.quality,lang:m.lang,episode_current:m.episode_current}).replace(/"/g,'&quot;');
+    const origin_name = m.original_name || m.origin_name || '';
+    const episode_current = m.current_episode || m.episode_current || '';
+    const favData = JSON.stringify({slug:m.slug,name:m.name,origin_name:origin_name,poster_url:m.poster_url,thumb_url:m.thumb_url,year:m.year,quality:m.quality,lang:m.lang,episode_current:episode_current}).replace(/"/g,'&quot;');
 
     let episodeHTML = '';
     if (episodes.length > 0) {
         episodes.forEach(server => {
-            const epList = server.server_data || [];
+            const epList = server.server_data || server.items || [];
             if (epList.length === 0) return;
             episodeHTML += `
                 <div class="episode-section">
@@ -573,12 +575,12 @@ async function renderDetailPage(slug) {
                 </div>
                 <div class="detail-content">
                     <h1 class="detail-title">${m.name}</h1>
-                    <p class="detail-origin-name">${m.origin_name || ''}</p>
+                    <p class="detail-origin-name">${m.original_name || m.origin_name || ''}</p>
                     <div class="detail-badges">
                         ${m.quality ? `<span class="detail-badge" style="background:var(--badge-fhd)">${m.quality}</span>` : ''}
                         ${m.lang ? `<span class="detail-badge" style="background:var(--gradient-cool)">${m.lang}</span>` : ''}
                         ${m.year ? `<span class="detail-badge" style="background:rgba(255,255,255,0.15);border:1px solid var(--border-color)">${m.year}</span>` : ''}
-                        ${m.episode_current ? `<span class="detail-badge" style="background:var(--gradient-warm)">${m.episode_current}</span>` : ''}
+                        ${(m.episode_current || m.current_episode) ? `<span class="detail-badge" style="background:var(--gradient-warm)">${m.episode_current || m.current_episode}</span>` : ''}
                         ${m.status === 'ongoing' ? `<span class="detail-badge" style="background:var(--accent-3)">Đang chiếu</span>` : ''}
                         ${m.status === 'completed' ? `<span class="detail-badge" style="background:var(--badge-fhd)">Hoàn tất</span>` : ''}
                     </div>
@@ -594,7 +596,7 @@ async function renderDetailPage(slug) {
                         ${m.trailer_url ? `<a href="${m.trailer_url}" target="_blank" rel="noopener" class="btn btn-ghost" style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color)">🎬 Trailer</a>` : ''}
                     </div>
                     <table class="detail-table">
-                        ${m.episode_current ? `<tr><td>Tình trạng</td><td>${m.episode_current}${m.episode_total ? ' / ' + m.episode_total + ' tập' : ''}</td></tr>` : ''}
+                        ${(m.episode_current || m.current_episode) ? `<tr><td>Tình trạng</td><td>${m.episode_current || m.current_episode}${m.episode_total ? ' / ' + m.episode_total + ' tập' : ''}</td></tr>` : ''}
                         ${m.time ? `<tr><td>Thời lượng</td><td>${m.time}</td></tr>` : ''}
                         ${categories ? `<tr><td>Thể loại</td><td>${categories}</td></tr>` : ''}
                         ${countries ? `<tr><td>Quốc gia</td><td>${countries}</td></tr>` : ''}
