@@ -5,21 +5,21 @@
 // ====== MULTI-SOURCE CONFIG ======
 const SOURCES = {
     nguonc: {
-        name: 'NguonC',
+        name: 'Chu Hun Xu lu gi',
         api: 'https://phim.nguonc.com/api',
         imgDomain: '',
         type: 'v2', // NguonC schema
         logo: 'https://tinhlagi.pro/home/nguonC.png'
     },
     ophim: {
-        name: 'OPhim',
+        name: 'Người lỳ hợp tính',
         api: 'https://ophim1.com',
         imgDomain: 'https://img.ophim.live/uploads/movies/',
         type: 'v1', // Ophim schema
         logo: 'https://tinhlagi.pro/home/ophim.ico'
     },
     kkphim: {
-        name: 'KKPhim',
+        name: 'Người tình hợp lý',
         api: 'https://phimapi.com',
         imgDomain: 'https://phimimg.com/',
         type: 'v1', // PhimAPI schema
@@ -239,7 +239,17 @@ function initSearch() {
         if (e.key === 'Escape') toggleSearch();
         if (e.key === 'Enter') {
             const q = input.value.trim();
-            if (q.length >= 2) { toggleSearch(); navigateTo('search', q); }
+            if (q.length >= 1) { 
+                toggleSearch(); 
+                navigateTo('search', q); 
+            }
+        }
+    });
+    // Close search when clicking outside
+    document.addEventListener('click', (e) => {
+        const wrapper = $('searchWrapper');
+        if (wrapper && !wrapper.contains(e.target) && $('searchBox').classList.contains('active')) {
+            toggleSearch();
         }
     });
 }
@@ -636,7 +646,7 @@ async function renderDetailPage(slug) {
 
     const categories = categoriesList.map(c => `<a href="#" onclick="navigateTo('genre', '${c.slug}'); return false;">${c.name}</a>`).join(', ');
     const countries = countriesList.map(c => `<a href="#" onclick="navigateTo('country', '${c.slug}'); return false;">${c.name}</a>`).join(', ');
-    const actors = Array.isArray(m.actor) ? m.actor.join(', ') : (m.actor || '');
+    const actors = Array.isArray(m.actor) ? m.actor.join(', ') : (m.actor || m.casts || '');
     const directors = Array.isArray(m.director) ? m.director.join(', ') : (m.director || '');
 
     const origin_name = m.original_name || m.origin_name || '';
@@ -732,11 +742,88 @@ function playEpisode(btn, slug, episodeName) {
     // Cuộn tới player ngay lập tức
     player.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
+    const createManualFallbackBtn = (type, currentUrl) => {
+        const label = type === 'iframe' ? '📺 Thử mã nhúng (Nếu HLS lỗi)' : '⚡ Thử Luồng HLS (Khuyên dùng)';
+        const otherType = type === 'iframe' ? 'embed' : 'hls';
+        return `<div style="text-align:center; padding:10px; opacity:0.6;">
+                    <button class="btn btn-sm" style="font-size:12px;" onclick="forcePlay('${otherType}', '${m3u8Url}', '${embedUrl}', '${episodeName}', '${slug}')">
+                        ${label}
+                    </button>
+                </div>`;
+    };
+
     if (m3u8Url && m3u8Url !== 'undefined') {
-        player.innerHTML = `<video id="videoPlayer" controls autoplay playsinline style="width:100%; height:100%; background:#000; border-radius:8px;"></video>`;
-        const video = document.getElementById('videoPlayer');
+        player.innerHTML = `
+            <video id="videoPlayer" controls autoplay playsinline style="width:100%; height:100%; background:#000; border-radius:8px;"></video>
+            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none;">⚡ HLS Native</div>
+            ${createManualFallbackBtn('iframe', embedUrl)}
+        `;
+    const video = document.getElementById('videoPlayer');
+    let autoNextShown = false;
+
+    // Helper to trigger next episode
+    const playNextEpisode = () => {
+        const nextBtn = btn.nextElementSibling;
+        if (nextBtn && nextBtn.classList.contains('episode-btn')) {
+            nextBtn.click();
+        }
+    };
+
+    video.ontimeupdate = () => {
+        const timeLeft = video.duration - video.currentTime;
         
-        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        // Skip Intro Button (Show only in first 5 mins - 300s)
+        let skipBtn = document.getElementById('skipIntroBtn');
+        if (video.currentTime > 5 && video.currentTime < 300) {
+            if (!skipBtn) {
+                const btnHtml = `<button id="skipIntroBtn" class="skip-intro-btn">⏭️ Bỏ qua giới thiệu</button>`;
+                player.insertAdjacentHTML('beforeend', btnHtml);
+                skipBtn = document.getElementById('skipIntroBtn');
+                skipBtn.onclick = () => { video.currentTime += 90; skipBtn.remove(); };
+            }
+        } else if (skipBtn && (video.currentTime >= 300 || video.currentTime < 5)) {
+            skipBtn.remove();
+        }
+
+        // Auto Next Countdown (Show in last 12 seconds)
+        if (timeLeft > 0 && timeLeft < 12 && !autoNextShown) {
+            const nextBtn = btn.nextElementSibling;
+            if (nextBtn && nextBtn.classList.contains('episode-btn')) {
+                autoNextShown = true;
+                const nextName = nextBtn.textContent.trim();
+                const overlayHtml = `
+                    <div id="autoNextOverlay" class="auto-next-overlay">
+                        <div class="auto-next-header">Tập tiếp theo sau <span id="autoNextTimer">10</span>s</div>
+                        <div class="auto-next-title">${nextName}</div>
+                        <div class="auto-next-controls">
+                            <button class="auto-next-btn" onclick="this.closest('.auto-next-overlay').remove(); document.querySelector('.episode-btn.active').nextElementSibling.click();">
+                                🎬 Xem Ngay
+                            </button>
+                            <button class="auto-next-cancel" onclick="this.closest('.auto-next-overlay').remove();" title="Hủy">✕</button>
+                        </div>
+                    </div>`;
+                player.insertAdjacentHTML('beforeend', overlayHtml);
+                
+                let count = 10;
+                const timerInt = setInterval(() => {
+                    const overlay = document.getElementById('autoNextOverlay');
+                    if (!overlay) { clearInterval(timerInt); return; } // User closed it
+                    
+                    count--;
+                    const timerEl = document.getElementById('autoNextTimer');
+                    if (timerEl) timerEl.textContent = count;
+                    
+                    if (count <= 0) {
+                        clearInterval(timerInt);
+                        overlay.remove();
+                        playNextEpisode();
+                    }
+                }, 1000);
+            }
+        }
+    };
+
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
             const hls = new Hls({ startLevel: -1 });
             hls.loadSource(m3u8Url);
             hls.attachMedia(video);
@@ -745,24 +832,42 @@ function playEpisode(btn, slug, episodeName) {
             });
             hls.on(Hls.Events.ERROR, function(event, data) {
                 if (data.fatal && embedUrl) {
-                    console.warn('HLS stream lỗi, chuyển sang Iframe embed...');
+                    console.warn('HLS stream lỗi, tự động chuyển sang Iframe embed...');
                     hls.destroy();
-                    player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
+                    forcePlay('embed', m3u8Url, embedUrl, episodeName, slug);
                 }
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // Safari native
             video.src = m3u8Url;
-            video.addEventListener('loadedmetadata', function() { video.play(); });
+            video.addEventListener('loadedmetadata', function() { video.play(); showToast(`Đang phát: ${episodeName}`, '▶️'); });
         } else if (embedUrl) {
-            player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
+            forcePlay('embed', m3u8Url, embedUrl, episodeName, slug);
         }
     } else if (embedUrl) {
-        // Fallback lại iframe hoàn toàn
-        player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
+        forcePlay('embed', m3u8Url, embedUrl, episodeName, slug);
     }
 
     History.add({ slug, name: document.querySelector('.detail-title')?.textContent || '', poster_url: '' }, episodeName);
     showToast(`Đang phát: ${episodeName}`, '▶️');
+}
+
+// Global helper for forced player switching
+window.forcePlay = function(type, m3u8, embed, epName, slug) {
+    const player = $('playerContainer');
+    if (type === 'embed') {
+        let cleanEmbed = embed;
+        if (!cleanEmbed.includes('autoplay=1')) {
+            cleanEmbed += (cleanEmbed.includes('?') ? '&' : '?') + 'autoplay=1';
+        }
+        player.innerHTML = `
+            <iframe src="${cleanEmbed}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>
+            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none;">📺 Embed Mode</div>
+            ${m3u8 ? `<div style="text-align:center; padding:10px; opacity:0.6;"><button class="btn btn-sm" style="font-size:12px;" onclick="forcePlay('hls', '${m3u8}', '${embed}', '${epName}', '${slug}')">⚡ Quay lại Luồng HLS</button></div>` : ''}
+        `;
+    } else {
+        const fakeBtn = { dataset: { m3u8, embed }, classList: { remove: ()=>{}, add: ()=>{} } };
+        playEpisode(fakeBtn, slug, epName);
+    }
 }
 
 // --- FAVORITES ---
