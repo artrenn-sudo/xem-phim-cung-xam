@@ -619,9 +619,8 @@ function playEpisode(btn, slug, episodeName) {
     btn.classList.add('active');
 
     const embedUrl = btn.dataset.embed;
-    const m3u8Url = btn.dataset.m3u8;
 
-    if (!embedUrl && !m3u8Url) {
+    if (!embedUrl) {
         showToast('Không tìm thấy link phim', '❌');
         return;
     }
@@ -630,41 +629,9 @@ function playEpisode(btn, slug, episodeName) {
     // Cuộn tới player ngay lập tức
     player.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Ưu tiên phát qua HLS (m3u8) để không bị quảng cáo iframe, fallback về embed
-    if (m3u8Url && m3u8Url.trim() !== '') {
-        player.innerHTML = `<video id="hlsVideo" controls playsinline style="width: 100%; height: 100%; border-radius: 12px; background: #000; outline: none;"></video>`;
-        const video = document.getElementById('hlsVideo');
-        
-        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(m3u8Url);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play().catch(e => console.log('Tự động phát bị chặn'));
-            });
-            // Bắt lỗi HLS để fallback nếu link m3u8 chết
-            hls.on(Hls.Events.ERROR, function(event, data) {
-                 if (data.fatal) {
-                     console.log('Lỗi HLS, fallback qua iframe');
-                     hls.destroy();
-                     player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
-                 }
-            });
-        }
-        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Dành cho Safari ios
-            video.src = m3u8Url;
-            video.addEventListener('loadedmetadata', function() {
-                video.play().catch(e => console.log('Tự động phát bị chặn'));
-            });
-            video.addEventListener('error', function() {
-                 player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
-            });
-        }
-    } else {
-        // Play fallback
-        player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>`;
-    }
+    // Fallback lại iframe hoàn toàn do luồng m3u8 bị block IP nước ngoài
+    // KHÔNG dùng sandbox để player có thể load source bình thường
+    player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
 
     History.add({ slug, name: document.querySelector('.detail-title')?.textContent || '', poster_url: '' }, episodeName);
     showToast(`Đang phát: ${episodeName}`, '▶️');
