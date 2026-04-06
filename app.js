@@ -141,7 +141,13 @@ async function fetchMovieDetail(slug) {
 
 async function searchMovies(keyword, page = 1) {
     const path = currentConfig.type === 'v1' ? `/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}&limit=24&page=${page}` : `/films/search?keyword=${encodeURIComponent(keyword)}&page=${page}`;
-    return normalizeList(await fetchAPI(path));
+    try {
+        const data = await fetchAPI(path);
+        return normalizeList(data);
+    } catch (e) {
+        console.error('Search error:', e);
+        return { data: { items: [] } };
+    }
 }
 
 async function fetchByGenre(slug, page = 1) {
@@ -218,10 +224,20 @@ function toggleSearch() {
     if (isActive) {
         $('searchInput').focus();
     } else {
-        $('searchInput').value = '';
+        hideSearch();
+    }
+}
+
+function hideSearch() {
+    const box = $('searchBox');
+    const results = $('searchResults');
+    if (box) box.classList.remove('active');
+    if (results) {
         results.classList.remove('active');
         results.innerHTML = '';
     }
+    if ($('searchInput')) $('searchInput').value = '';
+    document.body.classList.remove('search-active');
 }
 
 function initSearch() {
@@ -298,6 +314,7 @@ function navigateTo(page, param = '', extra = '', updateHash = true) {
     }
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    hideSearch();
     $$('.nav-link').forEach(l => l.classList.remove('active'));
     const activeLink = document.querySelector(`.nav-link[data-page="${param || page}"]`);
     if (activeLink) activeLink.classList.add('active');
@@ -324,7 +341,7 @@ function handleRouting() {
     
     const parts = hash.split('/');
     const page = parts[0] || 'home';
-    const param = parts[1] || '';
+    const param = decodeURIComponent(parts[1] || '');
     const extra = parts[2] || '';
     
     navigateTo(page, param, extra, false);
@@ -611,16 +628,18 @@ async function renderCountryPage(slug, page = 1) {
 // --- SEARCH ---
 async function renderSearchPage(keyword, page = 1) {
     const main = $('mainContent');
+    const decodedKeyword = decodeURIComponent(keyword);
+    // Show Loading first
     main.innerHTML = `
-        <nav class="breadcrumb"><a href="#" onclick="navigateTo('home'); return false;">Trang Chủ</a><span class="separator">›</span><span class="current">Tìm kiếm: "${keyword}"</span></nav>
-        <div class="section-header"><h2 class="section-title"><span class="title-icon">🔍</span> Kết quả: "${keyword}"</h2></div>
+        <nav class="breadcrumb"><a href="#" onclick="navigateTo('home'); return false;">Trang Chủ</a><span class="separator">›</span><span class="current">Tìm kiếm: "${decodedKeyword}"</span></nav>
+        <div class="section-header"><h2 class="section-title"><span class="title-icon">🔍</span> Đang tìm kiếm: "${decodedKeyword}"...</h2></div>
         ${skeletonGrid(12)}`;
 
-    const data = await searchMovies(keyword, page);
+    const data = await searchMovies(decodedKeyword, page);
     if (!data || !data.data || !data.data.items || data.data.items.length === 0) {
         main.innerHTML = `
             <nav class="breadcrumb"><a href="#" onclick="navigateTo('home'); return false;">Trang Chủ</a><span class="separator">›</span><span class="current">Tìm kiếm</span></nav>
-            <div class="empty-state"><div class="empty-icon">🔍</div><h3>Không tìm thấy kết quả cho "${keyword}"</h3><p>Hãy thử từ khóa khác nhé!</p></div>`;
+            <div class="empty-state"><div class="empty-icon">🔍</div><h3>Không tìm thấy kết quả cho "${decodedKeyword}"</h3><p>Hãy thử từ khóa khác nhé!</p></div>`;
         return;
     }
 
@@ -793,6 +812,8 @@ function playEpisode(btn, slug, episodeName) {
 
         video.ontimeupdate = () => {
             const timeLeft = video.duration - video.currentTime;
+            
+            // Auto Next Countdown (Show in last 60 seconds, stay for 10s)
             if (timeLeft > 0 && timeLeft < 60 && !autoNextShown) {
                 const nextBtn = document.querySelector('.episode-btn.active')?.nextElementSibling;
                 if (nextBtn && nextBtn.classList.contains('episode-btn')) {
@@ -822,6 +843,7 @@ function playEpisode(btn, slug, episodeName) {
                             playNextEpisode();
                         }
                     }, 1000);
+                    // Force remove after 10s even if count is somehow stuck
                     setTimeout(() => { document.getElementById('autoNextOverlay')?.remove(); }, 10000);
                 }
             }
