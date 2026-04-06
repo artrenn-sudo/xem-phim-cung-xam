@@ -654,8 +654,8 @@ async function renderDetailPage(slug) {
                     <div class="episode-grid">
                         ${epList.map(ep => `
                             <button class="episode-btn"
-                                    data-embed="${ep.link_embed || ''}"
-                                    data-m3u8="${ep.link_m3u8 || ''}"
+                                    data-embed="${ep.link_embed || ep.embed || ''}"
+                                    data-m3u8="${ep.link_m3u8 || ep.m3u8 || ''}"
                                     data-name="${ep.name}"
                                     onclick="playEpisode(this, '${m.slug}', '${ep.name}')">
                                 ${ep.name}
@@ -696,7 +696,7 @@ async function renderDetailPage(slug) {
                     </div>
                     <table class="detail-table">
                         ${(m.episode_current || m.current_episode) ? `<tr><td>Tình trạng</td><td>${m.episode_current || m.current_episode}${m.episode_total ? ' / ' + m.episode_total + ' tập' : ''}</td></tr>` : ''}
-                        ${m.time ? `<tr><td>Thời lượng</td><td>${m.time}</td></tr>` : ''}
+                        ${(m.time || m.time_per_episode) ? `<tr><td>Thời lượng</td><td>${m.time || m.time_per_episode}</td></tr>` : ''}
                         ${categories ? `<tr><td>Thể loại</td><td>${categories}</td></tr>` : ''}
                         ${countries ? `<tr><td>Quốc gia</td><td>${countries}</td></tr>` : ''}
                         ${directors ? `<tr><td>Đạo diễn</td><td>${directors}</td></tr>` : ''}
