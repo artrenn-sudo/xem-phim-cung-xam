@@ -615,7 +615,7 @@ async function renderDetailPage(slug) {
     }
 
     const m = data.movie;
-    const episodes = data.episodes || [];
+    const episodes = m.episodes || data.episodes || [];
     History.add(m);
 
     const isFav = Favorites.has(m.slug);
