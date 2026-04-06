@@ -534,10 +534,25 @@ async function renderDetailPage(slug) {
     History.add(m);
 
     const isFav = Favorites.has(m.slug);
-    const categories = (m.category || []).map(c => `<a href="#" onclick="navigateTo('genre', '${c.slug}'); return false;">${c.name}</a>`).join(', ');
-    const countries = (m.country || []).map(c => `<a href="#" onclick="navigateTo('country', '${c.slug}'); return false;">${c.name}</a>`).join(', ');
-    const actors = (m.actor || []).join(', ');
-    const directors = (m.director || []).join(', ');
+    let categoriesList = [];
+    let countriesList = [];
+    
+    // NguonC group format parsing
+    if (m.category && !Array.isArray(m.category) && typeof m.category === 'object') {
+        Object.values(m.category).forEach(cat => {
+            if (cat.group?.name === 'Thể loại') categoriesList = cat.list || [];
+            if (cat.group?.name === 'Quốc gia') countriesList = cat.list || [];
+        });
+    } else {
+        // PhimAPI array format fallback
+        categoriesList = m.category || [];
+        countriesList = m.country || [];
+    }
+
+    const categories = categoriesList.map(c => `<a href="#" onclick="navigateTo('genre', '${c.slug}'); return false;">${c.name}</a>`).join(', ');
+    const countries = countriesList.map(c => `<a href="#" onclick="navigateTo('country', '${c.slug}'); return false;">${c.name}</a>`).join(', ');
+    const actors = Array.isArray(m.actor) ? m.actor.join(', ') : (m.actor || '');
+    const directors = Array.isArray(m.director) ? m.director.join(', ') : (m.director || '');
 
     const origin_name = m.original_name || m.origin_name || '';
     const episode_current = m.current_episode || m.episode_current || '';
