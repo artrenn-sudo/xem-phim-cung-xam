@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xem Phim Cùng Xám - Phim Chất Lượng Cao Vietsub</title>
+    <meta name="description" content="Xem Phim Cùng Xám - Trang xem phim cá nhân với chất lượng FHD, Vietsub đầy đủ. Phim bộ, phim lẻ, hoạt hình mới nhất.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Header / Navigation -->
+    <header class="header" id="mainHeader">
+        <div class="header-inner">
+            <a href="#" class="logo" onclick="navigateTo('home'); return false;">
+                <span class="logo-icon">🎬</span>
+                <span class="logo-text">Phim Cùng <span class="logo-accent">Xám</span></span>
+            </a>
+            
+            <nav class="nav-desktop" id="navDesktop">
+                <a href="#" class="nav-link active" data-page="home" onclick="navigateTo('home'); return false;">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146z"/></svg>
+                    Trang Chủ
+                </a>
+                <a href="#" class="nav-link" data-page="phim-bo" onclick="navigateTo('category', 'phim-bo'); return false;">Phim Bộ</a>
+                <a href="#" class="nav-link" data-page="phim-le" onclick="navigateTo('category', 'phim-le'); return false;">Phim Lẻ</a>
+                <a href="#" class="nav-link" data-page="hoat-hinh" onclick="navigateTo('category', 'hoat-hinh'); return false;">Hoạt Hình</a>
+                <a href="#" class="nav-link" data-page="tv-shows" onclick="navigateTo('category', 'tv-shows'); return false;">TV Shows</a>
+                
+                <!-- Thể Loại Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-link nav-dropdown-btn" type="button">
+                        Thể Loại
+                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
+                    <div class="nav-dropdown-menu" id="genreDropdown">
+                        <a href="#" onclick="navigateTo('genre','hanh-dong'); return false;">Hành Động</a>
+                        <a href="#" onclick="navigateTo('genre','co-trang'); return false;">Cổ Trang</a>
+                        <a href="#" onclick="navigateTo('genre','chien-tranh'); return false;">Chiến Tranh</a>
+                        <a href="#" onclick="navigateTo('genre','vien-tuong'); return false;">Viễn Tưởng</a>
+                        <a href="#" onclick="navigateTo('genre','kinh-di'); return false;">Kinh Dị</a>
+                        <a href="#" onclick="navigateTo('genre','bi-an'); return false;">Bí Ẩn</a>
+                        <a href="#" onclick="navigateTo('genre','tinh-cam'); return false;">Tình Cảm</a>
+                        <a href="#" onclick="navigateTo('genre','tam-ly'); return false;">Tâm Lý</a>
+                        <a href="#" onclick="navigateTo('genre','hai-huoc'); return false;">Hài Hước</a>
+                        <a href="#" onclick="navigateTo('genre','hinh-su'); return false;">Hình Sự</a>
+                        <a href="#" onclick="navigateTo('genre','vo-thuat'); return false;">Võ Thuật</a>
+                        <a href="#" onclick="navigateTo('genre','phieu-luu'); return false;">Phiêu Lưu</a>
+                        <a href="#" onclick="navigateTo('genre','gia-dinh'); return false;">Gia Đình</a>
+                        <a href="#" onclick="navigateTo('genre','hoc-duong'); return false;">Học Đường</a>
+                        <a href="#" onclick="navigateTo('genre','the-thao'); return false;">Thể Thao</a>
+                        <a href="#" onclick="navigateTo('genre','am-nhac'); return false;">Âm Nhạc</a>
+                        <a href="#" onclick="navigateTo('genre','khoa-hoc'); return false;">Khoa Học</a>
+                        <a href="#" onclick="navigateTo('genre','than-thoai'); return false;">Thần Thoại</a>
+                        <a href="#" onclick="navigateTo('genre','chinh-kich'); return false;">Chính Kịch</a>
+                        <a href="#" onclick="navigateTo('genre','tai-lieu'); return false;">Tài Liệu</a>
+                        <a href="#" onclick="navigateTo('genre','kinh-dien'); return false;">Kinh Điển</a>
+                    </div>
+                </div>
+
+                <!-- Quốc Gia Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-link nav-dropdown-btn" type="button">
+                        Quốc Gia
+                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
+                    <div class="nav-dropdown-menu" id="countryDropdown">
+                        <a href="#" onclick="navigateTo('country','han-quoc'); return false;">Hàn Quốc</a>
+                        <a href="#" onclick="navigateTo('country','trung-quoc'); return false;">Trung Quốc</a>
+                        <a href="#" onclick="navigateTo('country','au-my'); return false;">Âu Mỹ</a>
+                        <a href="#" onclick="navigateTo('country','nhat-ban'); return false;">Nhật Bản</a>
+                        <a href="#" onclick="navigateTo('country','thai-lan'); return false;">Thái Lan</a>
+                        <a href="#" onclick="navigateTo('country','dai-loan'); return false;">Đài Loan</a>
+                        <a href="#" onclick="navigateTo('country','hong-kong'); return false;">Hồng Kông</a>
+                        <a href="#" onclick="navigateTo('country','an-do'); return false;">Ấn Độ</a>
+                        <a href="#" onclick="navigateTo('country','anh'); return false;">Anh</a>
+                        <a href="#" onclick="navigateTo('country','phap'); return false;">Pháp</a>
+                        <a href="#" onclick="navigateTo('country','canada'); return false;">Canada</a>
+                        <a href="#" onclick="navigateTo('country','tho-nhi-ky'); return false;">Thổ Nhĩ Kỳ</a>
+                        <a href="#" onclick="navigateTo('country','nga'); return false;">Nga</a>
+                        <a href="#" onclick="navigateTo('country','duc'); return false;">Đức</a>
+                        <a href="#" onclick="navigateTo('country','tay-ban-nha'); return false;">Tây Ban Nha</a>
+                        <a href="#" onclick="navigateTo('country','indonesia'); return false;">Indonesia</a>
+                        <a href="#" onclick="navigateTo('country','viet-nam'); return false;">Việt Nam</a>
+                    </div>
+                </div>
+
+                <a href="#" class="nav-link" data-page="favorites" onclick="navigateTo('favorites'); return false;">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/></svg>
+                    Yêu Thích
+                </a>
+            </nav>
+
+            <div class="header-actions">
+                <div class="search-wrapper" id="searchWrapper">
+                    <button class="search-toggle" id="searchToggle" onclick="toggleSearch()" aria-label="Tìm kiếm">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    </button>
+                    <div class="search-box" id="searchBox">
+                        <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" id="searchInput" placeholder="Tìm tên phim, diễn viên..." autocomplete="off">
+                        <button class="search-close" onclick="toggleSearch()">✕</button>
+                    </div>
+                    <div class="search-results" id="searchResults"></div>
+                </div>
+                
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Đổi giao diện">
+                    <svg class="sun-icon" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/></svg>
+                    <svg class="moon-icon" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+                </button>
+
+                <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileMenu()" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="toggleMobileMenu()"></div>
+    <nav class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <span class="logo-text">Phim Cùng <span class="logo-accent">Xám</span></span>
+            <button onclick="toggleMobileMenu()">✕</button>
+        </div>
+        <a href="#" onclick="navigateTo('home'); toggleMobileMenu(); return false;">🏠 Trang Chủ</a>
+        <a href="#" onclick="navigateTo('category', 'phim-bo'); toggleMobileMenu(); return false;">📺 Phim Bộ</a>
+        <a href="#" onclick="navigateTo('category', 'phim-le'); toggleMobileMenu(); return false;">🎬 Phim Lẻ</a>
+        <a href="#" onclick="navigateTo('category', 'hoat-hinh'); toggleMobileMenu(); return false;">🎨 Hoạt Hình</a>
+        <a href="#" onclick="navigateTo('category', 'tv-shows'); toggleMobileMenu(); return false;">📡 TV Shows</a>
+        <a href="#" onclick="navigateTo('category', 'phim-chieu-rap'); toggleMobileMenu(); return false;">🎥 Chiếu Rạp</a>
+        <div class="mobile-menu-divider"></div>
+        <div class="mobile-menu-section">Thể Loại</div>
+        <a href="#" onclick="navigateTo('genre','hanh-dong'); toggleMobileMenu(); return false;">⚔️ Hành Động</a>
+        <a href="#" onclick="navigateTo('genre','tinh-cam'); toggleMobileMenu(); return false;">💕 Tình Cảm</a>
+        <a href="#" onclick="navigateTo('genre','kinh-di'); toggleMobileMenu(); return false;">👻 Kinh Dị</a>
+        <a href="#" onclick="navigateTo('genre','hai-huoc'); toggleMobileMenu(); return false;">😂 Hài Hước</a>
+        <a href="#" onclick="navigateTo('genre','vien-tuong'); toggleMobileMenu(); return false;">🚀 Viễn Tưởng</a>
+        <a href="#" onclick="navigateTo('genre','co-trang'); toggleMobileMenu(); return false;">🏯 Cổ Trang</a>
+        <div class="mobile-menu-divider"></div>
+        <div class="mobile-menu-section">Quốc Gia</div>
+        <a href="#" onclick="navigateTo('country','han-quoc'); toggleMobileMenu(); return false;">🇰🇷 Hàn Quốc</a>
+        <a href="#" onclick="navigateTo('country','trung-quoc'); toggleMobileMenu(); return false;">🇨🇳 Trung Quốc</a>
+        <a href="#" onclick="navigateTo('country','au-my'); toggleMobileMenu(); return false;">🇺🇸 Âu Mỹ</a>
+        <a href="#" onclick="navigateTo('country','nhat-ban'); toggleMobileMenu(); return false;">🇯🇵 Nhật Bản</a>
+        <a href="#" onclick="navigateTo('country','thai-lan'); toggleMobileMenu(); return false;">🇹🇭 Thái Lan</a>
+        <div class="mobile-menu-divider"></div>
+        <a href="#" onclick="navigateTo('favorites'); toggleMobileMenu(); return false;">❤️ Yêu Thích</a>
+        <a href="#" onclick="navigateTo('history'); toggleMobileMenu(); return false;">🕐 Lịch Sử Xem</a>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent"></main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <span class="logo-text">Phim Cùng <span class="logo-accent">Xám</span></span>
+                <p>Trang xem phim cá nhân - Được tạo bởi Xám 🎬</p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-col">
+                    <h4>Danh Mục</h4>
+                    <a href="#" onclick="navigateTo('category', 'phim-bo'); return false;">Phim Bộ</a>
+                    <a href="#" onclick="navigateTo('category', 'phim-le'); return false;">Phim Lẻ</a>
+                    <a href="#" onclick="navigateTo('category', 'hoat-hinh'); return false;">Hoạt Hình</a>
+                    <a href="#" onclick="navigateTo('category', 'tv-shows'); return false;">TV Shows</a>
+                    <a href="#" onclick="navigateTo('category', 'phim-chieu-rap'); return false;">Chiếu Rạp</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Thể Loại Hot</h4>
+                    <a href="#" onclick="navigateTo('genre', 'hanh-dong'); return false;">Hành Động</a>
+                    <a href="#" onclick="navigateTo('genre', 'tinh-cam'); return false;">Tình Cảm</a>
+                    <a href="#" onclick="navigateTo('genre', 'kinh-di'); return false;">Kinh Dị</a>
+                    <a href="#" onclick="navigateTo('genre', 'hai-huoc'); return false;">Hài Hước</a>
+                    <a href="#" onclick="navigateTo('genre', 'vien-tuong'); return false;">Viễn Tưởng</a>
+                    <a href="#" onclick="navigateTo('genre', 'co-trang'); return false;">Cổ Trang</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Quốc Gia</h4>
+                    <a href="#" onclick="navigateTo('country', 'han-quoc'); return false;">Hàn Quốc</a>
+                    <a href="#" onclick="navigateTo('country', 'trung-quoc'); return false;">Trung Quốc</a>
+                    <a href="#" onclick="navigateTo('country', 'au-my'); return false;">Âu Mỹ</a>
+                    <a href="#" onclick="navigateTo('country', 'nhat-ban'); return false;">Nhật Bản</a>
+                    <a href="#" onclick="navigateTo('country', 'thai-lan'); return false;">Thái Lan</a>
+                    <a href="#" onclick="navigateTo('country', 'viet-nam'); return false;">Việt Nam</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 Xem Phim Cùng Xám. Dữ liệu được tổng hợp từ các nguồn công khai trên Internet.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Back to Top -->
+    <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'})" aria-label="Lên đầu trang">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+    </button>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader">
+            <div class="loader-ring"></div>
+            <span>Đang tải...</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
