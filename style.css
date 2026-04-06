@@ -442,3 +442,4 @@ html:not(.dark) .detail-backdrop::after { background: linear-gradient(to bottom,
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+.nav-dropdown { padding-bottom: 30px; margin-bottom: -30px; }  
