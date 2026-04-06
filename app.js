@@ -2,8 +2,37 @@
    Xem Phim Cùng Xám - Application Logic
    ============================================ */
 
-// --- API Configuration ---
-const API_BASE = 'https://phim.nguonc.com/api';
+// ====== MULTI-SOURCE CONFIG ======
+const SOURCES = {
+    nguonc: {
+        name: 'NguonC',
+        api: 'https://phim.nguonc.com/api',
+        imgDomain: '',
+        type: 'v2', // NguonC schema
+        logo: 'https://tinhlagi.pro/home/nguonC.png'
+    },
+    ophim: {
+        name: 'OPhim',
+        api: 'https://ophim1.com',
+        imgDomain: 'https://img.ophim1.com/uploads/movies/',
+        type: 'v1', // Ophim schema
+        logo: 'https://tinhlagi.pro/home/ophim.ico'
+    },
+    kkphim: {
+        name: 'KKPhim',
+        api: 'https://phimapi.com',
+        imgDomain: 'https://phimimg.com/',
+        type: 'v1', // PhimAPI schema
+        logo: 'https://tinhlagi.pro/home/kkphim.png'
+    }
+};
+
+let currentSource = localStorage.getItem('xpcx_source') || 'nguonc';
+if (!SOURCES[currentSource]) currentSource = 'nguonc';
+let currentConfig = SOURCES[currentSource];
+
+window._currentParam = null;
+window._currentExtra = null;
 
 // --- State ---
 let currentPage = 'home';
@@ -19,7 +48,14 @@ function $$(sel) { return document.querySelectorAll(sel); }
  */
 function getImgUrl(url) {
     if (!url) return '';
-    return url;
+    if (url.startsWith('http')) return url;
+    
+    const cdn = currentConfig.imgDomain;
+    if (!cdn) return url;
+    
+    if (cdn.endsWith('/') && url.startsWith('/')) return cdn + url.substring(1);
+    if (!cdn.endsWith('/') && !url.startsWith('/')) return cdn + '/' + url;
+    return cdn + url;
 }
 
 function truncate(str, len = 150) {
@@ -39,10 +75,35 @@ function showToast(message, icon = '✓') {
     setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
+// --- Source Switcher UI ---
+function renderSourcePicker() {
+    const container = $('sourcePicker');
+    if (!container) return;
+    
+    let html = '';
+    for (const [key, config] of Object.entries(SOURCES)) {
+        html += `<button class="source-btn ${key === currentSource ? 'active' : ''}" onclick="setSource('${key}')">
+            <img src="${config.logo}" alt="${config.name}" onerror="this.src='https://placehold.co/16x16/222/FFF?text=${config.name.charAt(0)}'">
+            ${config.name}
+        </button>`;
+    }
+    container.innerHTML = html;
+}
+
+function setSource(srcKey) {
+    if (!SOURCES[srcKey] || srcKey === currentSource) return;
+    currentSource = srcKey;
+    currentConfig = SOURCES[srcKey];
+    localStorage.setItem('xpcx_source', srcKey);
+    renderSourcePicker();
+    // Reload the current page
+    navigateTo(currentPage, window._currentParam, window._currentExtra);
+}
+
 // --- API Fetching ---
 async function fetchAPI(path) {
     try {
-        const res = await fetch(`${API_BASE}${path}`);
+        const res = await fetch(`${currentConfig.api}${path}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
     } catch (err) {
@@ -51,30 +112,51 @@ async function fetchAPI(path) {
     }
 }
 
+// Unified List Normalization wrapper for v1/v2 endpoints
+function normalizeList(res) {
+    if (!res) return null;
+    // v1 generic lists inside data.items
+    if (res.data && res.data.items) return res; 
+    // v2 or root lists
+    if (!res.items) return null;
+    
+    // Fallback pagination extraction
+    const totalPages = res.paginate?.total_page || res.pagination?.totalPages || 1;
+    const currentPageInfo = res.paginate?.current_page || res.pagination?.currentPage || 1;
+    
+    return { data: { items: res.items, params: { pagination: { totalPages: totalPages, currentPage: currentPageInfo } } } };
+}
+
+// Path Builder functions based on config
 async function fetchMovieList(page = 1) {
-    return fetchAPI(`/films/phim-moi-cap-nhat?page=${page}`);
+    const path = currentConfig.type === 'v1' ? `/danh-sach/phim-moi-cap-nhat?page=${page}` : `/films/phim-moi-cap-nhat?page=${page}`;
+    return fetchAPI(path);
 }
 
 async function fetchMovieDetail(slug) {
-    return fetchAPI(`/film/${slug}`);
-}
-
-// NguonC paginator normalizer to match existing UI code
-function normalizeList(res) {
-    if (!res || !res.items) return null;
-    return { data: { items: res.items, params: { pagination: { totalPages: res.paginate?.total_page || 1, currentPage: res.paginate?.current_page || 1 } } } };
+    const path = currentConfig.type === 'v1' ? `/phim/${slug}` : `/film/${slug}`;
+    const data = await fetchAPI(path);
+    return data;
 }
 
 async function searchMovies(keyword, page = 1) {
-    return normalizeList(await fetchAPI(`/films/search?keyword=${encodeURIComponent(keyword)}&page=${page}`));
+    const path = currentConfig.type === 'v1' ? `/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}&limit=24&page=${page}` : `/films/search?keyword=${encodeURIComponent(keyword)}&page=${page}`;
+    return normalizeList(await fetchAPI(path));
 }
 
 async function fetchByGenre(slug, page = 1) {
-    return normalizeList(await fetchAPI(`/films/the-loai/${slug}?page=${page}`));
+    const path = currentConfig.type === 'v1' ? `/v1/api/the-loai/${slug}?limit=24&page=${page}` : `/films/the-loai/${slug}?page=${page}`;
+    return normalizeList(await fetchAPI(path));
 }
 
 async function fetchByCountry(slug, page = 1) {
-    return normalizeList(await fetchAPI(`/films/quoc-gia/${slug}?page=${page}`));
+    const path = currentConfig.type === 'v1' ? `/v1/api/quoc-gia/${slug}?limit=24&page=${page}` : `/films/quoc-gia/${slug}?page=${page}`;
+    return normalizeList(await fetchAPI(path));
+}
+
+async function fetchCategory(type, page = 1) {
+    const path = currentConfig.type === 'v1' ? `/v1/api/danh-sach/${type}?limit=24&page=${page}` : `/films/danh-sach/${type}?page=${page}`;
+    return normalizeList(await fetchAPI(path));
 }
 
 // --- Favorites Manager ---
@@ -194,6 +276,8 @@ function toggleMobileMenu() {
 // --- Navigation ---
 function navigateTo(page, param = '', extra = '') {
     currentPage = page;
+    window._currentParam = param;
+    window._currentExtra = extra;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     $$('.nav-link').forEach(l => l.classList.remove('active'));
     const activeLink = document.querySelector(`.nav-link[data-page="${param || page}"]`);
@@ -737,5 +821,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearch();
     initScrollEffects();
     initKeyboard();
+    renderSourcePicker();
     navigateTo('home');
 });
