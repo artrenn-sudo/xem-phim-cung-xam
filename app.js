@@ -764,119 +764,83 @@ function playEpisode(btn, slug, episodeName) {
     }
 
     const player = $('playerContainer');
-    // Cuộn tới player ngay lập tức
     player.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     const createManualFallbackBtn = (type, currentUrl) => {
-        const label = type === 'iframe' ? '📺 Thử mã nhúng (Nếu HLS lỗi)' : '⚡ Thử Luồng HLS (Khuyên dùng)';
+        const label = type === 'iframe' ? '📺 Thử mã nhúng (Nếu HLS lỗi)' : '⚡ Thử Luồng HLS (Hết QC)';
         const otherType = type === 'iframe' ? 'embed' : 'hls';
-        return `<div style="text-align:center; padding:10px; opacity:0.6;">
-                    <button class="btn btn-sm" style="font-size:12px;" onclick="forcePlay('${otherType}', '${m3u8Url}', '${embedUrl}', '${episodeName}', '${slug}')">
-                        ${label}
-                    </button>
-                </div>`;
+        return `<button class="btn btn-sm" style="font-size:12px;" onclick="forcePlay('${otherType}', '${m3u8Url}', '${embedUrl}', '${episodeName}', '${slug}')">${label}</button>`;
     };
 
-    if (m3u8Url && m3u8Url !== 'undefined') {
-        player.innerHTML = `
-            <video id="videoPlayer" controls autoplay playsinline style="width:100%; height:100%; background:#000; border-radius:8px;"></video>
-            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none;">⚡ HLS Native</div>
-            ${createManualFallbackBtn('iframe', embedUrl)}
-        `;
-    const video = document.getElementById('videoPlayer');
-    let autoNextShown = false;
-
-    // Helper to trigger next episode
     const playNextEpisode = () => {
-        const nextBtn = btn.nextElementSibling;
+        const nextBtn = document.querySelector('.episode-btn.active')?.nextElementSibling;
         if (nextBtn && nextBtn.classList.contains('episode-btn')) {
             nextBtn.click();
         }
     };
 
-    video.ontimeupdate = () => {
-        const timeLeft = video.duration - video.currentTime;
-        
-        // Skip Intro Button (Show after 10s, visible for 20s)
-        let skipBtn = document.getElementById('skipIntroBtn');
-        if (video.currentTime > 10 && video.currentTime < 300) {
-            if (!skipBtn) {
-                // Check if it was already shown and closed for this video
-                if (!video._skipIntroShown) {
-                    const btnHtml = `<button id="skipIntroBtn" class="skip-intro-btn">⏭️ Bỏ qua giới thiệu</button>`;
-                    player.insertAdjacentHTML('beforeend', btnHtml);
-                    skipBtn = document.getElementById('skipIntroBtn');
-                    skipBtn.onclick = () => { video.currentTime += 90; skipBtn.remove(); };
-                    video._skipIntroShown = true;
-                    // Auto-hide after 20s
-                    setTimeout(() => { if (skipBtn) skipBtn.remove(); }, 20000);
+    if (m3u8Url && m3u8Url !== 'undefined') {
+        player.innerHTML = `
+            <video id="videoPlayer" controls autoplay playsinline style="width:100%; height:100%; background:#000; border-radius:8px;"></video>
+            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;">⚡ HLS Native</div>
+            <div style="display:flex; justify-content:center; gap:10px; padding:15px; background:var(--bg-card); border-radius:0 0 8px 8px;">
+                ${embedUrl ? createManualFallbackBtn('iframe', embedUrl) : ''}
+                <button class="btn btn-sm" onclick="document.querySelector('.episode-btn.active').nextElementSibling?.click()">⏭️ Tập Tiếp Theo</button>
+            </div>
+        `;
+        const video = document.getElementById('videoPlayer');
+        let autoNextShown = false;
+
+        video.ontimeupdate = () => {
+            const timeLeft = video.duration - video.currentTime;
+            if (timeLeft > 0 && timeLeft < 60 && !autoNextShown) {
+                const nextBtn = document.querySelector('.episode-btn.active')?.nextElementSibling;
+                if (nextBtn && nextBtn.classList.contains('episode-btn')) {
+                    autoNextShown = true;
+                    const nextName = nextBtn.textContent.trim();
+                    const overlayHtml = `
+                        <div id="autoNextOverlay" class="auto-next-overlay">
+                            <div class="auto-next-header">Chuyển tập tiếp sau <span id="autoNextTimer">10</span>s</div>
+                            <div class="auto-next-title">${nextName}</div>
+                            <div class="auto-next-controls">
+                                <button class="auto-next-btn" onclick="this.closest('.auto-next-overlay').remove(); document.querySelector('.episode-btn.active').nextElementSibling.click();">🎬 Xem Ngay</button>
+                                <button class="auto-next-cancel" onclick="this.closest('.auto-next-overlay').remove();" title="Hủy">✕</button>
+                            </div>
+                        </div>`;
+                    player.insertAdjacentHTML('beforeend', overlayHtml);
+                    
+                    let count = 10;
+                    const timerInt = setInterval(() => {
+                        const overlay = document.getElementById('autoNextOverlay');
+                        if (!overlay) { clearInterval(timerInt); return; }
+                        count--;
+                        const timerEl = document.getElementById('autoNextTimer');
+                        if (timerEl) timerEl.textContent = count;
+                        if (count <= 0) {
+                            clearInterval(timerInt);
+                            overlay.remove();
+                            playNextEpisode();
+                        }
+                    }, 1000);
+                    setTimeout(() => { document.getElementById('autoNextOverlay')?.remove(); }, 10000);
                 }
             }
-        }
+        };
 
-        // Auto Next Countdown (Show in last 60 seconds, stay for 10s)
-        if (timeLeft > 0 && timeLeft < 60 && !autoNextShown) {
-            const nextBtn = btn.nextElementSibling;
-            if (nextBtn && nextBtn.classList.contains('episode-btn')) {
-                autoNextShown = true;
-                const nextName = nextBtn.textContent.trim();
-                const overlayHtml = `
-                    <div id="autoNextOverlay" class="auto-next-overlay">
-                        <div class="auto-next-header">Chuyển tập tiếp sau <span id="autoNextTimer">10</span>s</div>
-                        <div class="auto-next-title">${nextName}</div>
-                        <div class="auto-next-controls">
-                            <button class="auto-next-btn" onclick="this.closest('.auto-next-overlay').remove(); document.querySelector('.episode-btn.active').nextElementSibling.click();">
-                                🎬 Xem Ngay
-                            </button>
-                            <button class="auto-next-cancel" onclick="this.closest('.auto-next-overlay').remove();" title="Hủy">✕</button>
-                        </div>
-                    </div>`;
-                player.insertAdjacentHTML('beforeend', overlayHtml);
-                
-                let count = 10;
-                const timerInt = setInterval(() => {
-                    const overlay = document.getElementById('autoNextOverlay');
-                    if (!overlay) { clearInterval(timerInt); return; } // User closed it
-                    
-                    count--;
-                    const timerEl = document.getElementById('autoNextTimer');
-                    if (timerEl) timerEl.textContent = count;
-                    
-                    if (count <= 0) {
-                        clearInterval(timerInt);
-                        overlay.remove();
-                        playNextEpisode();
-                    }
-                }, 1000);
-
-                // Auto-hide overlay after 10s regardless of countdown if user didn't care
-                setTimeout(() => { 
-                    const overlay = document.getElementById('autoNextOverlay');
-                    if (overlay) overlay.remove(); 
-                }, 10000);
-            }
-        }
-    };
-
-    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
             const hls = new Hls({ startLevel: -1 });
             hls.loadSource(m3u8Url);
             hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play().catch(e => console.log('Autoplay blocked:', e));
-            });
-            hls.on(Hls.Events.ERROR, function(event, data) {
+            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => console.log('Autoplay blocked:', e)));
+            hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal && embedUrl) {
-                    console.warn('HLS stream lỗi, tự động chuyển sang Iframe embed...');
                     hls.destroy();
                     forcePlay('embed', m3u8Url, embedUrl, episodeName, slug);
                 }
             });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // Safari native
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = m3u8Url;
-            video.addEventListener('loadedmetadata', function() { video.play(); showToast(`Đang phát: ${episodeName}`, '▶️'); });
-        } else if (embedUrl) {
-            forcePlay('embed', m3u8Url, embedUrl, episodeName, slug);
+            video.addEventListener('loadedmetadata', () => video.play());
         }
     } else if (embedUrl) {
         forcePlay('embed', m3u8Url, embedUrl, episodeName, slug);
@@ -886,7 +850,6 @@ function playEpisode(btn, slug, episodeName) {
     showToast(`Đang phát: ${episodeName}`, '▶️');
 }
 
-// Global helper for forced player switching
 window.forcePlay = function(type, m3u8, embed, epName, slug) {
     const player = $('playerContainer');
     if (type === 'embed') {
@@ -895,12 +858,17 @@ window.forcePlay = function(type, m3u8, embed, epName, slug) {
             cleanEmbed += (cleanEmbed.includes('?') ? '&' : '?') + 'autoplay=1';
         }
         player.innerHTML = `
-            <iframe src="${cleanEmbed}" allowfullscreen 
-                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen" 
-                    sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
-                    style="width:100%; height:100%; border:none;"></iframe>
-            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none;">📺 Embed Mode (NguonC)</div>
-            ${m3u8 ? `<div style="text-align:center; padding:10px; opacity:0.6;"><button class="btn btn-sm" style="font-size:12px;" onclick="forcePlay('hls', '${m3u8}', '${embed}', '${epName}', '${slug}')">⚡ Dùng Luồng HLS (Khuyên dùng để chặn QC)</button></div>` : ''}
+            <div style="position:relative; width:100%; height:100%; min-height:400px; background:#000;">
+                <iframe src="${cleanEmbed}" allowfullscreen 
+                        allow="autoplay; encrypted-media; picture-in-picture; fullscreen" 
+                        sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
+                        style="width:100%; height:100%; border:none;"></iframe>
+            </div>
+            <div id="playerStatus" style="position:absolute; top:10px; right:10px; font-size:10px; color:#fff; pointer-events:none; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;">📺 Embed Mode</div>
+            <div style="display:flex; justify-content:center; gap:10px; padding:15px; background:var(--bg-card); border-radius:0 0 8px 8px;">
+                ${m3u8 && m3u8 !== 'undefined' ? `<button class="btn btn-sm btn-primary" onclick="forcePlay('hls', '${m3u8}', '${embed}', '${epName}', '${slug}')">⚡ Dùng Luồng HLS (Hết QC)</button>` : ''}
+                <button class="btn btn-sm" onclick="document.querySelector('.episode-btn.active').nextElementSibling?.click()">⏭️ Tập Tiếp Theo</button>
+            </div>
         `;
     } else {
         const fakeBtn = { dataset: { m3u8, embed }, classList: { remove: ()=>{}, add: ()=>{} } };

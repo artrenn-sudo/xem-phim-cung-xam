@@ -8,9 +8,9 @@ git config user.name "artrenn-sudo"
 echo Dang staging cac file...
 git add .
 echo Dang commit cac thay doi...
-git commit -m "UX Refinements: Search fix, Auto-Next/Skip Intro timing, Ad-blocking, and Routing"
+git commit -m "Final Player Fix: Remove Skip Intro, Fix Auto Next, and Add Next Episode Button"
 echo Dang day len GitHub...
 git push origin main
-echo Mo web link phim de kiem tra ket qua nhe!
+echo.
 echo XONG ROI! Kiem tra GitHub nhe ban!
 pause
