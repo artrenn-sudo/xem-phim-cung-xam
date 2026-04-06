@@ -14,7 +14,7 @@ const SOURCES = {
     ophim: {
         name: 'OPhim',
         api: 'https://ophim1.com',
-        imgDomain: 'https://img.ophim1.com/uploads/movies/',
+        imgDomain: 'https://img.ophim.live/uploads/movies/',
         type: 'v1', // Ophim schema
         logo: 'https://tinhlagi.pro/home/ophim.ico'
     },
@@ -452,7 +452,8 @@ async function renderCategoryPage(type, page = 1) {
         data = await fetchMovieList(page);
         if (data) data = normalizeList(data);
     } else {
-        data = normalizeList(await fetchAPI(`/films/danh-sach/${type}?page=${page}`));
+        const path = currentConfig.type === 'v1' ? `/v1/api/danh-sach/${type}?limit=24&page=${page}` : `/films/danh-sach/${type}?page=${page}`;
+        data = normalizeList(await fetchAPI(path));
     }
 
     if (!data || !data.data || !data.data.items) {
@@ -720,8 +721,9 @@ function playEpisode(btn, slug, episodeName) {
     btn.classList.add('active');
 
     const embedUrl = btn.dataset.embed;
+    const m3u8Url = btn.dataset.m3u8;
 
-    if (!embedUrl) {
+    if (!embedUrl && !m3u8Url) {
         showToast('Không tìm thấy link phim', '❌');
         return;
     }
@@ -730,9 +732,34 @@ function playEpisode(btn, slug, episodeName) {
     // Cuộn tới player ngay lập tức
     player.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Fallback lại iframe hoàn toàn do luồng m3u8 bị block IP nước ngoài
-    // KHÔNG dùng sandbox để player có thể load source bình thường
-    player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
+    if (m3u8Url && m3u8Url !== 'undefined') {
+        player.innerHTML = `<video id="videoPlayer" controls autoplay playsinline style="width:100%; height:100%; background:#000; border-radius:8px;"></video>`;
+        const video = document.getElementById('videoPlayer');
+        
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+            const hls = new Hls({ startLevel: -1 });
+            hls.loadSource(m3u8Url);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play().catch(e => console.log('Autoplay blocked:', e));
+            });
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                if (data.fatal && embedUrl) {
+                    console.warn('HLS stream lỗi, chuyển sang Iframe embed...');
+                    hls.destroy();
+                    player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // Safari native
+            video.src = m3u8Url;
+            video.addEventListener('loadedmetadata', function() { video.play(); });
+        } else if (embedUrl) {
+            player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
+        }
+    } else if (embedUrl) {
+        // Fallback lại iframe hoàn toàn
+        player.innerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen" style="width:100%; height:100%; border:none;"></iframe>`;
+    }
 
     History.add({ slug, name: document.querySelector('.detail-title')?.textContent || '', poster_url: '' }, episodeName);
     showToast(`Đang phát: ${episodeName}`, '▶️');
